@@ -73,4 +73,26 @@ function Disable-TelemetryTracing {
     Main
 }
 
+function Enable-ShowFileExtensions {
+    Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name HideFileExt -Value "0"
+}
+
+function Enable-ShowHiddenItems {
+    Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name Hidden -Value "1"
+}
+
+function Disable-RerunAppsAfterRestart {
+    Set-ItemProperty -Path HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System -Name DisableAutomaticRestartSignOn -Value "1"
+}
+
+function Disable-TipsOnLockScreen {
+  # GPO %Systemroot%\System32\GroupPolicy
+  # https://docs.microsoft.com/de-de/archive/blogs/secguide/lgpo-exe-local-group-policy-object-utility-v1-0
+  #  Computer Configuration\Administrative Templates\Windows Components\Cloud Content\Do not show Windows Tips
+}
+
 Disable-TelemetryTracing
+# Enable-ShowFileExtensions
+# Enable-ShowHiddenItems
+# Disable-RerunAppsAfterRestart
+# Disable-AdsOnLockScreen
