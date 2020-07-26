@@ -1,98 +1,86 @@
-
 Set-StrictMode -Version Latest
 
-<#
-.SYNOPSIS
-    Disables the windows telemetry collection and submission.
-.DESCRIPTION
-    This function stops the service "DiagTrack" which is responsible to collect 
-    and submit telemetry data to Microsoft. You can do this on your own
-.EXAMPLE Disable telemetry from shell
-    PS :> Disable-TelemetryTracing
-#>
-function Disable-TelemetryTracing {
+function Start-IronSkin {
     function Main {
-        if (HasAdministratorRole) {
-            try {
-                $service = Get-Service -Name 'DiagTrack' 
-                $service | Stop-Service
-                $service | Set-Service -StartupType Disabled
-            }
-            catch {
-                Write-Warning 'It was not possible to disable Telemetry'
-            }
+        $scriptPath = Split-Path -Parent $PSCommandPath
+        $modulePath = Join-Path -Path $scriptPath -ChildPath MyIronSkin\MyIronSkin.psm1
+        Import-Module $modulePath -Force
+
+        if (Get-UserHasAdministratorRole) {
+            Disable-Telemetry
         }
         else {
-            "no admin rights, trying to open in admin rights"
-            $proc = StartMySelfWithAdminRole
-            $proc.WaitForExit()
+            # TODO apply non admin settings
+            # Enable-ShowFileExtensions
+            # Enable-ShowHiddenItems
+            # Disable-RerunAppsAfterRestart
+            # Disable-AdsOnLockScreen
 
-            $service = Get-Service 'DiagTrack'
-            $warnings = 0
-            if ($service.Status -eq 'Running') {
-                Write-Warning 'Telemetry: It was not possible to stop the service'
-                $warnings++
-            }
-            if ($service.StartType -ne 'Disabled') {
-                Write-Warning 'Telemetry: It was not possible to disable the auto start'
-                $warnings++
-            }
+            Start-AsAdministrator
 
-            if ($warnings -eq 0) {
-                Write-Host 'Telemetry disabled' -ForegroundColor Green
-            } 
-            pause "Press ENTER to stop or close the window"
+            if(Get-Status) {
+                exit 0
+            } else {
+                exit 1
+            }
         }
     }
 
-    function HasAdministratorRole() {
-        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-        $princ = New-Object System.Security.Principal.WindowsPrincipal($identity)
-        if (!$princ.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) {
-            return $false
+    function Get-Status {
+        $warnings = 0
+
+        Write-Host 'Telemetry: ' -NoNewline
+        if (Get-IsTelemetryDisabled) {
+            Write-Host 'enabled' -ForegroundColor Green
+        } else {
+            $warnings++
+            Write-Host 'disabled' -ForegroundColor Yellow
+        }            
+
+        if ($warnings -eq 0) {
+            Write-Host 'All settings applied' -ForegroundColor Green
+        } else {
+            Write-Host 'Some settings could not be applied' -ForegroundColor Yellow
         }
-        else {
-            return $true
-        }
+        Pause "Press ENTER to stop or close the window"
+        return $warnings -eq 0
     }
-    
-    function StartMySelfWithAdminRole {
+
+    function Start-AsAdministrator {
         $powershell = [System.Diagnostics.Process]::GetCurrentProcess()
         $psi = New-Object System.Diagnostics.ProcessStartInfo $powerShell.Path
         $psi.Arguments = '-ExecutionPolicy ByPass -file ' + $script:MyInvocation.MyCommand.Path
         $psi.Verb = 'runas'
         $newProcess = [System.Diagnostics.Process]::Start($psi)
-        return $newProcess
+        $newProcess.WaitForExit()
     }
 
-    function pause ($message) {
+    function Pause ($message) {
         Write-Host "$message" -ForegroundColor Cyan
         $null = $host.ui.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
 
+    function Enable-ShowFileExtensions {
+        Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name HideFileExt -Value "0"
+    }
+
+    function Enable-ShowHiddenItems {
+        Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name Hidden -Value "1"
+    }
+
+    function Disable-RerunAppsAfterRestart {
+        Set-ItemProperty -Path HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System -Name DisableAutomaticRestartSignOn -Value "1"
+    }
+
+    function Disable-TipsOnLockScreen {
+        # download LGPO.exe https://www.microsoft.com/en-us/download/details.aspx?id=55319
+        # GPO %Systemroot%\System32\GroupPolicy
+        # https://docs.microsoft.com/de-de/archive/blogs/secguide/lgpo-exe-local-group-policy-object-utility-v1-0
+        #  Computer Configuration\Administrative Templates\Windows Components\Cloud Content\Do not show Windows Tips
+    }
+
     Main
+
 }
 
-function Enable-ShowFileExtensions {
-    Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name HideFileExt -Value "0"
-}
-
-function Enable-ShowHiddenItems {
-    Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name Hidden -Value "1"
-}
-
-function Disable-RerunAppsAfterRestart {
-    Set-ItemProperty -Path HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System -Name DisableAutomaticRestartSignOn -Value "1"
-}
-
-function Disable-TipsOnLockScreen {
-  # GPO %Systemroot%\System32\GroupPolicy
-  # https://docs.microsoft.com/de-de/archive/blogs/secguide/lgpo-exe-local-group-policy-object-utility-v1-0
-  #  Computer Configuration\Administrative Templates\Windows Components\Cloud Content\Do not show Windows Tips
-}
-
-Disable-TelemetryTracing
-# Enable-ShowFileExtensions
-# Enable-ShowHiddenItems
-# Disable-RerunAppsAfterRestart
-# Disable-AdsOnLockScreen
+Start-IronSkin
