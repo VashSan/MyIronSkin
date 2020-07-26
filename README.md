@@ -1,6 +1,8 @@
 # MyIronSkin
 Common settings I apply on my windows machines.
 
+![](images/example.png)
+
 ## Motivation
 
 Everytime I install a new machine, I want to iron the settings out. But I forget what I apply, so I create this script to not forget and practice some PowerShell.
