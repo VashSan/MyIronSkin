@@ -8,6 +8,7 @@ function Start-IronSkin {
 
         if (Get-UserHasAdministratorRole) {
             Disable-Telemetry
+            Enable-PotentialUnwantedAppProtection
         }
         else {
             # TODO apply non admin settings
@@ -29,21 +30,42 @@ function Start-IronSkin {
     function Get-Status {
         $warnings = 0
 
-        Write-Host 'Telemetry: ' -NoNewline
+        Write-HostNoNewline 'Telemetry'
         if (Get-IsTelemetryDisabled) {
-            Write-Host 'enabled' -ForegroundColor Green
+            Write-GreenEnabled
         } else {
             $warnings++
-            Write-Host 'disabled' -ForegroundColor Yellow
-        }            
+            Write-YellowDisabled
+        }
+
+        Write-HostNoNewline 'Unwanted App Protection'
+        if (Get-IsUnwantedAppProtectionEnabled) {
+            Write-GreenEnabled
+        } else {
+            $warnings++
+            Write-YellowDisabled
+        }
 
         if ($warnings -eq 0) {
             Write-Host 'All settings applied' -ForegroundColor Green
         } else {
             Write-Host 'Some settings could not be applied' -ForegroundColor Yellow
         }
-        Pause "Press ENTER to stop or close the window"
+        Write-Host 'Please reboot the machine to finish'
+        Pause "Press ENTER to continue or close the window"
         return $warnings -eq 0
+    }
+
+    function Write-HostNoNewline($text) {
+        Write-Host "$($text): " -NoNewline
+    }
+
+    function Write-GreenEnabled {
+        Write-Host 'enabled' -ForegroundColor Green
+    }
+
+    function Write-YellowDisabled {
+        Write-Host 'disabled' -ForegroundColor Yellow
     }
 
     function Start-AsAdministrator {
